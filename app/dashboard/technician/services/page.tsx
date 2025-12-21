@@ -18,6 +18,10 @@ export default async function TechnicianServicesPage() {
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
   if (profile?.role !== "technician") redirect("/dashboard/customer")
 
+  // Verify the technician profile exists; otherwise require onboarding
+  const { data: techProfile } = await supabase.from("technician_profiles").select("id").eq("id", user.id).single()
+  if (!techProfile) redirect("/dashboard/technician/onboarding")
+
   // Get technician's current services with platform service details
   const { data: myServices } = await supabase
     .from("technician_services")

@@ -25,19 +25,26 @@ export default async function TechnicianBookingsPage() {
     redirect("/")
   }
 
+  // Require onboarding completion
+  const { data: techProfile } = await supabase.from("technician_profiles").select("id").eq("id", user.id).single()
+  if (!techProfile) redirect("/dashboard/technician/onboarding")
+
   // Fetch all bookings
-  const { data: bookings } = await supabase
+  const { data: bookings,error } = await supabase
     .from("bookings")
     .select(
       `
       *,
       customer:profiles!bookings_customer_id_fkey(full_name, phone, email),
-      service:technician_services(service_name, base_price)
+      service:technician_services(service_id:services(name), custom_price)
     `,
     )
     .eq("technician_id", user.id)
     .order("scheduled_date", { ascending: false })
-
+  if (error) {
+    console.error("Failed to fetch bookings:", error)
+  }
+  console.log(bookings)
   const pendingBookings = bookings?.filter((b) => b.status === "pending")
   const confirmedBookings = bookings?.filter((b) => b.status === "confirmed")
   const inProgressBookings = bookings?.filter((b) => b.status === "in_progress")
@@ -57,7 +64,7 @@ export default async function TechnicianBookingsPage() {
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
-            <CardTitle className="text-lg">{booking.service?.service_name}</CardTitle>
+            <CardTitle className="text-lg">{booking.service?.service_id.name}</CardTitle>
             <CardDescription>Customer: {booking.customer?.full_name}</CardDescription>
           </div>
           <Badge className={statusColors[booking.status as keyof typeof statusColors]}>{booking.status}</Badge>

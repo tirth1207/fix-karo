@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
-import { Shield, LogOut, Users, AlertTriangle, DollarSign } from "lucide-react"
+import { Shield, LogOut, Users, AlertTriangle, DollarSign, Briefcase } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -38,6 +38,12 @@ export function AdminNav() {
             <Button variant="ghost">
               <AlertTriangle className="mr-2 h-4 w-4" />
               Fraud Monitoring
+            </Button>
+          </Link>
+          <Link href="/admin/services">
+            <Button variant="ghost">
+              <Briefcase className="mr-2 h-4 w-4" />
+              Services
             </Button>
           </Link>
           <Link href="/admin/payments">

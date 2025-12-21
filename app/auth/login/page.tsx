@@ -35,11 +35,22 @@ export default function LoginPage() {
       // Get user profile to determine role
       const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single()
 
-      // Redirect based on role
+      // Redirect based on role; for technicians check onboarding status
       if (profile?.role === "admin") {
         router.push("/admin")
       } else if (profile?.role === "technician") {
-        router.push("/dashboard/technician")
+        try {
+          const res = await fetch("/api/technician/profile/check")
+          const json = await res.json()
+          if (json.isTechnician && json.hasProfile === false) {
+            router.push("/dashboard/technician/onboarding")
+          } else {
+            router.push("/dashboard/technician")
+          }
+        } catch (e) {
+          // Fallback: navigate to technician dashboard and let server guard handle enforcement
+          router.push("/dashboard/technician")
+        }
       } else {
         router.push("/dashboard/customer")
       }

@@ -25,22 +25,25 @@ export default async function CustomerDashboardPage() {
   }
 
   // Fetch customer bookings
-  const { data: bookings } = await supabase
+  const { data: bookings,error } = await supabase
     .from("bookings")
     .select(
       `
       *,
-      technician:technician_profiles(
+      technician_id:technician_profiles(
         *,
-        profile:profiles(full_name, avatar_url)
+        profile:profiles!technician_profiles_id_fkey(id, full_name)
       ),
-      service:technician_services(service_name, base_price)
+      service:technician_services(service_id:services(name), custom_price)
     `,
     )
     .eq("customer_id", user.id)
     .order("scheduled_date", { ascending: false })
     .limit(10)
-
+  if (error) {
+    console.error("Failed to fetch bookings:", error)
+  }
+  console.log(bookings)
   const statusColors = {
     pending: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
     confirmed: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
@@ -74,9 +77,9 @@ export default async function CustomerDashboardPage() {
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div>
-                          <CardTitle className="text-lg">{booking.service?.service_name}</CardTitle>
+                          <CardTitle className="text-lg">{booking.service?.service_id.name}</CardTitle>
                           <CardDescription>
-                            with {booking.technician?.profile?.full_name || "Technician"}
+                            with {booking.technician_id?.profile?.full_name || "Technician"}
                           </CardDescription>
                         </div>
                         <Badge className={statusColors[booking.status as keyof typeof statusColors]}>
@@ -103,7 +106,7 @@ export default async function CustomerDashboardPage() {
                         <div className="flex items-center gap-2">
                           <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                           <span className="font-medium">
-                            {booking.technician?.rating?.toFixed(1) || "N/A"} ({booking.technician?.total_reviews || 0}{" "}
+                            {booking.technician_id?.rating?.toFixed(1) || "N/A"} ({booking.technician_id?.total_reviews || 0}{" "}
                             reviews)
                           </span>
                         </div>
