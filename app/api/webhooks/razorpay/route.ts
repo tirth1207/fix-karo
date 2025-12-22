@@ -41,7 +41,7 @@ export async function POST(req: Request) {
             const { data: payment } = await supabase
                 .from("payments")
                 .select("*")
-                .eq("razorpay_order_id", orderId)
+                .eq("idempotency_key", orderId)
                 .single()
 
             if (!payment) {
