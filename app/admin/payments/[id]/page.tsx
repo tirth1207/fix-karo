@@ -125,10 +125,20 @@ export default async function PaymentDetailsPage({ params }: { params: { id: str
                       </div>
                     )}
 
-                    {payment.transaction_id && (
+                    {payment.razorpay_order_id && (
                       <div className="rounded-lg border bg-muted/50 p-4">
-                        <p className="mb-1 text-xs text-muted-foreground">Transaction ID</p>
-                        <p className="font-mono text-sm">{payment.transaction_id}</p>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="mb-1 text-xs text-muted-foreground">Razorpay Order ID</p>
+                            <p className="font-mono text-sm">{payment.razorpay_order_id}</p>
+                          </div>
+                          {payment.razorpay_payment_id && (
+                            <div>
+                              <p className="mb-1 text-xs text-muted-foreground">Razorpay Payment ID</p>
+                              <p className="font-mono text-sm">{payment.razorpay_payment_id}</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
