@@ -48,11 +48,13 @@ export default async function BookingDetailsPage({ params }: { params: { id: str
     }
 
     // Fetch payment status if exists
-    const { data: payment } = await supabase
+    const { data: payment, error } = await supabase
         .from("payments")
         .select("*")
         .eq("booking_id", booking.id)
         .single()
+
+    console.log(payment, error)
 
     const isPaid = payment?.payment_status === "held_in_escrow" || payment?.payment_status === "released"
     const canPay = !isPaid && booking.status !== "cancelled"
@@ -86,7 +88,12 @@ export default async function BookingDetailsPage({ params }: { params: { id: str
                                 <CardContent className="space-y-4">
                                     <div className="flex justify-between items-center">
                                         <span className="text-lg font-semibold">{booking.service?.service_id.name}</span>
-                                        <Badge>{booking.status}</Badge>
+                                        <div className="flex gap-2">
+                                            <Badge variant={isPaid ? "default" : "secondary"}>
+                                                {isPaid ? "Payment Done" : "Payment Pending"}
+                                            </Badge>
+                                            <Badge variant="outline">{booking.status}</Badge>
+                                        </div>
                                     </div>
                                     <p className="text-sm text-muted-foreground">{booking.service?.service_id.description}</p>
 

@@ -1,10 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
+// import { createClient } from "@/lib/supabase/server"
 import { verifyWebhookSignature } from "@/lib/razorpay"
 import { headers } from "next/headers"
 import { NextResponse } from "next/server"
 import { holdPaymentInEscrow } from "@/app/actions/payment-actions"
 
 export async function POST(req: Request) {
+    console.log("Received Razorpay Webhook request")
     const body = await req.text()
     const headerPayload = await headers()
     const signature = headerPayload.get("x-razorpay-signature")
@@ -27,7 +28,25 @@ export async function POST(req: Request) {
 
     const payload = JSON.parse(body)
     const event = payload.event
-    const supabase = await createClient()
+
+    // Use service role key to bypass RLS since webhook is anonymous
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !serviceRoleKey) {
+        console.error("Missing Supabase configuration for webhook")
+        return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+    }
+
+    // Import createClient dynamically or use the one from supabase-js if available
+    // We need to use the 'supabase-js' client here for admin access
+    const { createClient } = require('@supabase/supabase-js')
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+            autoRefreshToken: false,
+            persistSession: false
+        }
+    })
 
     try {
         if (event === "payment.captured") {
@@ -37,17 +56,33 @@ export async function POST(req: Request) {
 
             console.log(`Processing payment.captured for order ${orderId}`)
 
-            // 1. Find internal payment record
-            const { data: payment } = await supabase
-                .from("payments")
-                .select("*")
-                .eq("idempotency_key", orderId)
-                .single()
+            // 1. Find internal payment record with retry logic
+            // Webhook might arrive before DB insert due to race condition
+            let payment = null
+            let attempts = 0
+            const maxAttempts = 5
+
+            while (!payment && attempts < maxAttempts) {
+                const { data } = await supabase
+                    .from("payments")
+                    .select("*")
+                    .eq("idempotency_key", orderId)
+                    .single()
+
+                if (data) {
+                    payment = data
+                    break
+                }
+
+                attempts++
+                if (attempts < maxAttempts) {
+                    console.log(`Payment record not found, retrying (${attempts}/${maxAttempts})...`)
+                    await new Promise(resolve => setTimeout(resolve, 1000))
+                }
+            }
 
             if (!payment) {
-                // This might happen if webhook arrives before our DB insert (rare but possible)
-                // Or if it's a rogue payment. 
-                console.error(`Payment record not found for order ${orderId}`)
+                console.error(`Payment record not found for order ${orderId} after ${maxAttempts} attempts`)
                 return NextResponse.json({ error: "Payment record not found" }, { status: 404 })
             }
 
@@ -69,7 +104,7 @@ export async function POST(req: Request) {
                     payment_method: paymentEntity.method
                 })
                 .eq("id", payment.id)
-
+            console.log(updateError)
             if (updateError) throw updateError
 
             // 4. Create immutable event

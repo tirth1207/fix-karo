@@ -50,7 +50,10 @@ export function RazorpayPaymentButton({
                     // Optimistic update or wait for webhook
                     // We can verify signature here too for faster UX, but backend webhook is source of truth
                     toast.success("Payment Successful! Verifying...")
-                    router.refresh()
+                    // Add delay to allow webhook to process (race condition fix)
+                    setTimeout(() => {
+                        router.refresh()
+                    }, 3000)
                 },
                 prefill: {
                     //   name: "Gaurav Kumar",
