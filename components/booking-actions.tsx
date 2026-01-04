@@ -61,10 +61,12 @@ export function BookingActions({ bookingId, currentStatus }: { bookingId: string
     setError(null)
 
     try {
-      const result = await confirmBookingWithPayment(bookingId)
+      // const result = await confirmBookingWithPayment(bookingId)
 
-      if (!result.success) {
-        throw new Error(result.error)
+      const result = await updateStatus("confirmed")
+
+      if (!result) {
+        throw new Error(result)
       }
 
       router.refresh()

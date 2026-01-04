@@ -1,5 +1,6 @@
 "use server"
 
+import { syncServiceCityAvailability } from "@/lib/service-availability-gen"
 import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
@@ -60,8 +61,8 @@ export async function addTechnicianService(data: any) {
     is_active: false,
     approval_status: "pending",
   })
-
-  if (error) return { error: error.message }
+  const { error: syncError } = await syncServiceCityAvailability(user.id, data.service_id)
+  if (error || syncError) return { error: error?.message || syncError?.message }
 
   revalidatePath("/dashboard/technician/services")
   return { success: true }

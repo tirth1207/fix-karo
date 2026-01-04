@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Clock, Mail, Phone, AlertTriangle } from "lucide-react"
 import { BookingActions } from "@/components/booking-actions"
+import { JobPhotoUpload } from "@/components/job-photo-upload"
 
 export default async function BookingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
@@ -27,7 +28,7 @@ export default async function BookingDetailsPage({ params }: { params: Promise<{
   const { id } = await params
 
   // Fetch booking details
-  const { data: booking,error } = await supabase
+  const { data: booking, error } = await supabase
     .from("bookings")
     .select(
       `
@@ -39,7 +40,7 @@ export default async function BookingDetailsPage({ params }: { params: Promise<{
     .eq("id", id)
     .eq("technician_id", user.id)
     .single()
-  if(error){
+  if (error) {
     console.error("Failed to fetch booking details:", error)
   }
   console.log(booking)
@@ -211,6 +212,8 @@ export default async function BookingDetailsPage({ params }: { params: Promise<{
 
             {/* Customer info & actions */}
             <div className="space-y-6">
+              <JobPhotoUpload bookingId={booking.id} technicianId={user.id} />
+
               <Card>
                 <CardHeader>
                   <CardTitle>Customer Information</CardTitle>

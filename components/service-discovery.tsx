@@ -15,9 +15,11 @@ interface ServiceDiscoveryProps {
   categories: ServiceCategory[]
   customerCity: string
   customerState: string
+  customerLatitude: number
+  customerLongitude: number
 }
 
-export function ServiceDiscovery({ categories, customerCity, customerState }: ServiceDiscoveryProps) {
+export function ServiceDiscovery({ categories, customerCity, customerState, customerLatitude, customerLongitude }: ServiceDiscoveryProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [services, setServices] = useState<any[]>([])
   const [selectedService, setSelectedService] = useState<any>(null)
@@ -37,11 +39,15 @@ export function ServiceDiscovery({ categories, customerCity, customerState }: Se
   const handleServiceSelect = async (service: any) => {
     setSelectedService(service)
     setLoading(true)
-
+    console.log("service", service)
+    console.log("customerLatitude", customerLatitude)
+    console.log("customerLongitude", customerLongitude)
     const result = await findAvailableServices({
       serviceId: service.id,
       customerCity,
       customerState,
+      customerLatitude,
+      customerLongitude,
     })
 
     setMatches(result.matches || [])
@@ -69,9 +75,8 @@ export function ServiceDiscovery({ categories, customerCity, customerState }: Se
                   <button
                     key={category.id}
                     onClick={() => handleCategorySelect(category.id)}
-                    className={`p-4 rounded-lg border-2 transition-all hover:border-primary ${
-                      selectedCategory === category.id ? "border-primary bg-primary/5" : "border-border"
-                    }`}
+                    className={`p-4 rounded-lg border-2 transition-all hover:border-primary ${selectedCategory === category.id ? "border-primary bg-primary/5" : "border-border"
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -94,7 +99,7 @@ export function ServiceDiscovery({ categories, customerCity, customerState }: Se
               <CardHeader>
                 <CardTitle>Available Services</CardTitle>
                 <CardDescription>
-                  {services.length} service{services.length !== 1 ? "s" : ""} available in {customerCity},{" "}
+                  {services.length} service{services.length !== 0 ? "s" : ""} available in {customerCity},{" "}
                   {customerState}
                 </CardDescription>
               </CardHeader>
@@ -104,9 +109,8 @@ export function ServiceDiscovery({ categories, customerCity, customerState }: Se
                     <button
                       key={service.id}
                       onClick={() => handleServiceSelect(service)}
-                      className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:border-primary ${
-                        selectedService?.id === service.id ? "border-primary bg-primary/5" : "border-border"
-                      }`}
+                      className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:border-primary ${selectedService?.id === service.id ? "border-primary bg-primary/5" : "border-border"
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <h3 className="font-semibold text-lg">{service.name}</h3>
