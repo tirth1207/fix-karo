@@ -7,9 +7,11 @@ export default async function RebookPage({
   params,
   searchParams,
 }: {
-  params: { technicianId: string }
-  searchParams: { service?: string }
+  params: Promise<{ technicianId: string }>
+  searchParams: Promise<{ service?: string }>
 }) {
+  const { technicianId } = await params
+  const { service } = await searchParams
   const supabase = await createServerClient()
 
   const {
@@ -28,7 +30,7 @@ export default async function RebookPage({
       profile:profiles(full_name, city, state)
     `,
     )
-    .eq("id", params.technicianId)
+    .eq("id", technicianId)
     .single()
 
   if (!technician || technician.verification_status !== "verified") {
@@ -49,7 +51,7 @@ export default async function RebookPage({
     `,
     )
     .eq("customer_id", user.id)
-    .eq("technician_id", params.technicianId)
+    .eq("technician_id", technicianId)
     .order("scheduled_date", { ascending: false })
     .limit(1)
 
@@ -65,7 +67,7 @@ export default async function RebookPage({
           technician={technician}
           customerProfile={profile}
           previousBooking={previousBooking}
-          serviceId={searchParams.service}
+          serviceId={service}
         />
       </main>
     </div>

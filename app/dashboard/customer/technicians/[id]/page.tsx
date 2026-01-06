@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Star, MapPin, Clock, Shield, CheckCircle2 } from "lucide-react"
 import { BookingForm } from "@/components/booking-form"
 
-export default async function TechnicianProfilePage({ params }: { params: { id: string } }) {
+export default async function TechnicianProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
 
   const {
@@ -20,7 +20,7 @@ export default async function TechnicianProfilePage({ params }: { params: { id: 
   const { id } = await params
 
   // Fetch technician profile
-  const { data: technician,error } = await supabase
+  const { data: technician, error } = await supabase
     .from("technician_profiles")
     .select(`
     *,

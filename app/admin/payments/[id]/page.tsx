@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, DollarSign, User, Briefcase } from "lucide-react"
 import { PaymentActionsAdmin } from "@/components/payment-actions-admin"
 
-export default async function PaymentDetailsPage({ params }: { params: { id: string } }) {
+export default async function PaymentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
 
   const {

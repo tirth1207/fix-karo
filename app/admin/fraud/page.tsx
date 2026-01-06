@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 import { AlertTriangle, TrendingUp, Users, Activity } from "lucide-react"
+import AlertCard from "@/components/alert-card"
 
 export default async function FraudMonitoringPage() {
   const supabase = await createClient()
@@ -26,16 +27,15 @@ export default async function FraudMonitoringPage() {
   }
 
   // Fetch all fraud alerts
-  const { data: alerts } = await supabase
+  const { data: alerts, error } = await supabase
     .from("fraud_alerts")
     .select(
       `
       *,
-      user:profiles(full_name, email, role)
+      user:profiles!fraud_alerts_user_id_fkey(full_name, email, role)
     `,
     )
     .order("created_at", { ascending: false })
-
   const openAlerts = alerts?.filter((a) => a.status === "open")
   const investigatingAlerts = alerts?.filter((a) => a.status === "investigating")
   const resolvedAlerts = alerts?.filter((a) => a.status === "resolved")
@@ -56,71 +56,6 @@ export default async function FraudMonitoringPage() {
 
   // Fetch suspicious users (multiple threshold violations)
   const { data: suspiciousUsers } = await supabase.rpc("get_suspicious_users" as any).limit(20)
-
-  const severityColors = {
-    critical: "bg-red-500/10 text-red-700 dark:text-red-400",
-    high: "bg-orange-500/10 text-orange-700 dark:text-orange-400",
-    medium: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-    low: "bg-blue-500/10 text-blue-700 dark:text-blue-400",
-  }
-
-  const statusColors = {
-    open: "bg-red-500/10 text-red-700 dark:text-red-400",
-    investigating: "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400",
-    resolved: "bg-green-500/10 text-green-700 dark:text-green-400",
-    false_positive: "bg-gray-500/10 text-gray-700 dark:text-gray-400",
-  }
-
-  const AlertCard = ({ alert }: { alert: any }) => (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg">{alert.alert_type}</CardTitle>
-            <CardDescription>
-              {alert.user?.full_name} ({alert.user?.role})
-            </CardDescription>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            <Badge className={severityColors[alert.severity as keyof typeof severityColors]}>{alert.severity}</Badge>
-            <Badge className={statusColors[alert.status as keyof typeof statusColors]}>{alert.status}</Badge>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="mb-4 text-sm">{alert.description}</p>
-        <div className="space-y-2 text-xs text-muted-foreground">
-          <div className="flex justify-between">
-            <span>Created:</span>
-            <span>{new Date(alert.created_at).toLocaleString()}</span>
-          </div>
-          {alert.resolved_at && (
-            <div className="flex justify-between">
-              <span>Resolved:</span>
-              <span>{new Date(alert.resolved_at).toLocaleString()}</span>
-            </div>
-          )}
-          {alert.resolution_notes && (
-            <div className="mt-2 rounded-lg border bg-muted/50 p-2">
-              <p className="text-sm">{alert.resolution_notes}</p>
-            </div>
-          )}
-        </div>
-        <div className="mt-4 flex gap-2">
-          <Link href={`/admin/fraud/alerts/${alert.id}`}>
-            <Button size="sm" variant="outline">
-              Investigate
-            </Button>
-          </Link>
-          <Link href={`/admin/users/${alert.user_id}`}>
-            <Button size="sm" variant="outline">
-              View user
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
-  )
 
   return (
     <div className="flex min-h-svh flex-col">

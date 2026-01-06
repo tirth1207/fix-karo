@@ -8,12 +8,10 @@ import { Calendar, MapPin, Clock, ArrowLeft, CheckCircle2, AlertCircle } from "l
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
-export default async function BookingDetailsPage({ params }: { params: { id: string } }) {
+export default async function BookingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
     const supabase = await createClient()
 
-    // params.id is a promise or direct value depending on Next.js version, assuming direct for now or need await
-    // Next 15+ needs await params
-    const { id } = await Promise.resolve(params)
+    const { id } = await params
 
     const {
         data: { user },
