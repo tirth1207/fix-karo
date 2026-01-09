@@ -8,7 +8,7 @@ CREATE TYPE fraud_alert_status AS ENUM ('open', 'investigating', 'resolved', 'fa
 -- Profiles table (extends auth.users)
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  email TEXT NOT NULL,
+  email TEXT,
   full_name TEXT NOT NULL,
   phone TEXT,
   role user_role NOT NULL DEFAULT 'customer',
