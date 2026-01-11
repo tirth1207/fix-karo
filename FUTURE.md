@@ -13,14 +13,14 @@ DO NOT skip levels.
 
 These items block real users, real money, and real safety.
 
-### 0.1 Real OTP Delivery (CRITICAL)
+### 0.1 Real OTP Delivery (CRITICAL) (Not Applicable Currently)
 - [ ] Integrate SMS provider (Twilio / MSG91 / AWS SNS)
 - [ ] Remove OTP from API responses
 - [ ] Add resend OTP with cooldown (30s / max 3 tries)
 - [ ] Add OTP expiry handling UI
 - [ ] Log OTP attempts for abuse detection
 
-### 0.2 Customer OTP at Job Start & Completion
+### 0.2 Customer OTP at Job Start & Completion (Not Applicable Currently)
 - [ ] UI for customer to receive OTP
 - [ ] UI for technician to enter OTP
 - [ ] Retry + expiry handling
