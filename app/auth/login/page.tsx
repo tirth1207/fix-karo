@@ -52,7 +52,7 @@ export default function LoginPage() {
                     router.push("/dashboard/technician")
                 }
             } else {
-                router.push("/dashboard/customer")
+                router.push("/dashboard/customer/browse")
             }
         } catch (error: unknown) {
             setError(error instanceof Error ? error.message : "An error occurred")

@@ -1,15 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Search, Wrench, Star, MapPin, Clock, Shield, Award, TrendingUp } from "lucide-react"
+import { Search, MapPin, Clock, Shield, Star, Users, Zap, Home, Droplets, Paintbrush, Truck } from "lucide-react"
 import { searchServicesByCategory, findAvailableServices } from "@/app/actions/matching-actions"
 import type { ServiceCategory } from "@/lib/types"
-import Link from "next/link"
 
 interface ServiceDiscoveryProps {
   categories: ServiceCategory[]
@@ -19,13 +18,23 @@ interface ServiceDiscoveryProps {
   customerLongitude: number
 }
 
+// Map common categories to icons and colors for a better UI
+const getCategoryIcon = (categoryName: string) => {
+  const name = categoryName.toLowerCase()
+  if (name.includes("cleaning") || name.includes("pest")) return { icon: Droplets, color: "text-blue-500", bg: "bg-blue-50" }
+  if (name.includes("electric") || name.includes("plumb")) return { icon: Zap, color: "text-amber-500", bg: "bg-amber-50" }
+  if (name.includes("paint") || name.includes("waterproof")) return { icon: Paintbrush, color: "text-purple-500", bg: "bg-purple-50" }
+  if (name.includes("salon") || name.includes("beauty")) return { icon: Star, color: "text-pink-500", bg: "bg-pink-50" }
+  if (name.includes("ac") || name.includes("appliance")) return { icon: Home, color: "text-cyan-500", bg: "bg-cyan-50" }
+  if (name.includes("move") || name.includes("pack")) return { icon: Truck, color: "text-orange-500", bg: "bg-orange-50" }
+  return { icon: Shield, color: "text-primary", bg: "bg-primary/10" }
+}
+
 export function ServiceDiscovery({ categories, customerCity, customerState, customerLatitude, customerLongitude }: ServiceDiscoveryProps) {
+  const router = useRouter()
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [services, setServices] = useState<any[]>([])
-  const [selectedService, setSelectedService] = useState<any>(null)
-  const [matches, setMatches] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
-  const [searchQuery, setSearchQuery] = useState("")
 
   const handleCategorySelect = async (categoryId: string) => {
     setSelectedCategory(categoryId)
@@ -37,11 +46,7 @@ export function ServiceDiscovery({ categories, customerCity, customerState, cust
   }
 
   const handleServiceSelect = async (service: any) => {
-    setSelectedService(service)
     setLoading(true)
-    console.log("service", service)
-    console.log("customerLatitude", customerLatitude)
-    console.log("customerLongitude", customerLongitude)
     const result = await findAvailableServices({
       serviceId: service.id,
       customerCity,
@@ -50,219 +55,187 @@ export function ServiceDiscovery({ categories, customerCity, customerState, cust
       customerLongitude,
     })
 
-    setMatches(result.matches || [])
+    if (result.matches && result.matches.length > 0) {
+      const firstMatch = result.matches[0]
+      router.push(`/dashboard/customer/book?service=${firstMatch.technicianServiceId}`)
+    } else {
+      alert("No technicians currently available for this service in your area.")
+    }
     setLoading(false)
   }
 
   return (
-    <div className="space-y-6">
-      <Tabs defaultValue="category" className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="category">Browse by Category</TabsTrigger>
-          <TabsTrigger value="search">Describe Problem</TabsTrigger>
-        </TabsList>
+    <div className="space-y-12 animate-fade-in">
+      {/* Hero / Header Section */}
+      <div className="space-y-2">
+        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+          Home services at your <span className="text-primary">doorstep</span>
+        </h1>
+        <p className="text-lg text-muted-foreground">
+          Trusted professionals for all your home needs in {customerCity}
+        </p>
+      </div>
 
-        <TabsContent value="category" className="space-y-6">
-          {/* Categories */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Service Categories</CardTitle>
-              <CardDescription>Select a category to see available services in your area</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => handleCategorySelect(category.id)}
-                    className={`p-4 rounded-lg border-2 transition-all hover:border-primary ${selectedCategory === category.id ? "border-primary bg-primary/5" : "border-border"
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                        <Wrench className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="text-left">
-                        <p className="font-semibold">{category.name}</p>
-                        <p className="text-xs text-muted-foreground">{category.description}</p>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Services in selected category */}
-          {services.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Available Services</CardTitle>
-                <CardDescription>
-                  {services.length} service{services.length !== 0 ? "s" : ""} available in {customerCity},{" "}
-                  {customerState}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {services.map((service) => (
+      <div className="grid gap-8 lg:grid-cols-12">
+        {/* Left: What are you looking for? (Category Grid) */}
+        <div className="lg:col-span-5 flex flex-col h-full">
+          <Card className="h-full border shadow-lg overflow-hidden">
+            <div className="p-6 border-b bg-muted/20">
+              <h2 className="text-xl font-bold text-foreground">What are you looking for?</h2>
+            </div>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                {categories.map((category) => {
+                  const { icon: Icon, color, bg } = getCategoryIcon(category.name)
+                  return (
                     <button
-                      key={service.id}
-                      onClick={() => handleServiceSelect(service)}
-                      className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:border-primary ${selectedService?.id === service.id ? "border-primary bg-primary/5" : "border-border"
+                      key={category.id}
+                      onClick={() => handleCategorySelect(category.id)}
+                      className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all duration-200 hover:shadow-md border ${selectedCategory === category.id
+                          ? "border-primary bg-primary/5 ring-1 ring-primary"
+                          : "border-transparent bg-muted/30 hover:bg-muted/60"
                         }`}
                     >
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="font-semibold text-lg">{service.name}</h3>
-                        <div className="flex items-center gap-2">
-                          {service.emergency_supported && (
-                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                              Emergency
-                            </Badge>
-                          )}
-                          <span className="font-bold text-primary">${service.base_price}</span>
-                        </div>
+                      <div className={`h-12 w-12 rounded-full ${bg} flex items-center justify-center mb-3 transition-transform group-hover:scale-110`}>
+                        <Icon className={`h-6 w-6 ${color}`} />
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">{service.description}</p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {service.estimated_duration_minutes} min
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Shield className="h-3 w-3" />
-                          {service.warranty_days} day warranty
-                        </span>
-                      </div>
+                      <span className="text-xs font-semibold text-center text-foreground line-clamp-2">
+                        {category.name}
+                      </span>
                     </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Matched technicians */}
-          {matches.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Available Technicians</CardTitle>
-                <CardDescription>
-                  {matches.length} qualified technician{matches.length !== 1 ? "s" : ""} found - sorted by confidence
-                  score
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {matches.map((match) => (
-                    <div key={match.technicianServiceId} className="p-4 rounded-lg border bg-card">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h3 className="font-semibold text-lg">{match.technicianName}</h3>
-                            {match.isPreferred && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                <Star className="h-3 w-3 mr-1 fill-blue-700" />
-                                Preferred
-                              </Badge>
-                            )}
-                          </div>
-                          {match.businessName && <p className="text-sm text-muted-foreground">{match.businessName}</p>}
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-primary">${match.customPrice}</p>
-                          <p className="text-xs text-muted-foreground">Your Price</p>
-                        </div>
-                      </div>
-
-                      <div className="grid gap-2 mb-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1 text-muted-foreground">
-                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                            Rating:
-                          </span>
-                          <span className="font-medium">
-                            {match.rating.toFixed(1)} ({match.totalReviews} reviews)
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1 text-muted-foreground">
-                            <MapPin className="h-3 w-3" />
-                            Distance:
-                          </span>
-                          <span className="font-medium">{match.estimatedDistance} km away</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1 text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            ETA:
-                          </span>
-                          <span className="font-medium">{match.estimatedETA}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1 text-muted-foreground">
-                            <Award className="h-3 w-3" />
-                            Experience:
-                          </span>
-                          <span className="font-medium capitalize">{match.experienceLevel}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="flex items-center gap-1 text-muted-foreground">
-                            <TrendingUp className="h-3 w-3" />
-                            Confidence:
-                          </span>
-                          <span className="font-medium">{match.confidenceScore.toFixed(0)}%</span>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Link href={`/dashboard/customer/book?service=${match.technicianServiceId}`} className="flex-1">
-                          <Button className="w-full">Book Now</Button>
-                        </Link>
-                        <Link href={`/dashboard/customer/technicians/${match.technicianId}`}>
-                          <Button variant="outline">View Profile</Button>
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {loading && (
-            <div className="text-center py-8">
-              <p className="text-muted-foreground">Loading...</p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="search">
-          <Card>
-            <CardHeader>
-              <CardTitle>Describe Your Problem</CardTitle>
-              <CardDescription>Tell us what you need help with and we'll find the right service</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="e.g., My toilet is clogged..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  <Button>
-                    <Search className="h-4 w-4 mr-2" />
-                    Search
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  AI-powered search coming soon. For now, please use Browse by Category.
-                </p>
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+
+        {/* Right: Feature Collage / Service List */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* Collage (Visible only when no category selected) */}
+          {!selectedCategory && (
+            <div className="hidden lg:grid grid-cols-2 gap-4 h-full min-h-[400px]">
+              <div className="rounded-2xl overflow-hidden shadow-lg relative group">
+                <img
+                  src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                  alt="Modern Living Room Cleaning"
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
+                  <p className="text-white font-bold text-lg">Premium Cleaning</p>
+                </div>
+              </div>
+              <div className="grid grid-rows-2 gap-4">
+                <div className="rounded-2xl overflow-hidden shadow-lg relative group">
+                  <img
+                    src="https://images.unsplash.com/photo-1581578731117-104f2a8d467e?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                    alt="AC Repair"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                    <p className="text-white font-bold">Expert Repairs</p>
+                  </div>
+                </div>
+                <div className="rounded-2xl overflow-hidden shadow-lg relative group">
+                  <img
+                    src="https://images.unsplash.com/photo-1616486338812-3dadae4b4f9d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+                    alt="Plumbing"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-4">
+                    <p className="text-white font-bold">Quick Fixes</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Service List (Visible when category selected) */}
+          {selectedCategory && (
+            <div className="animate-in slide-in-from-right-4 fade-in duration-500">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold">Available Services</h3>
+                <Badge variant="outline" className="text-muted-foreground cursor-pointer" onClick={() => setSelectedCategory(null)}>Clear Selection</Badge>
+              </div>
+
+              {loading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => <div key={i} className="h-24 w-full rounded-xl bg-muted animate-pulse" />)}
+                </div>
+              ) : services.length > 0 ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {services.map((service) => (
+                    <div
+                      key={service.id}
+                      className="group relative overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-lg transition-all cursor-pointer hover:border-primary/50"
+                      onClick={() => handleServiceSelect(service)}
+                    >
+                      <div className="p-5 space-y-3">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-bold text-lg leading-tight group-hover:text-primary transition-colors">{service.name}</h4>
+                          <span className="font-bold text-primary bg-primary/10 px-2 py-1 rounded text-sm">${service.base_price}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground line-clamp-2">{service.description}</p>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground pt-2 border-t">
+                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {service.estimated_duration_minutes}m</span>
+                          <span className="flex items-center gap-1"><Shield className="h-3 w-3" /> Warranty</span>
+                        </div>
+                      </div>
+                      <Button size="sm" className="w-full rounded-t-none bg-primary/90 hover:bg-primary opacity-0 group-hover:opacity-100 transition-opacity absolute bottom-0 left-0">
+                        Book Now
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 border-2 border-dashed rounded-xl">
+                  <p className="text-muted-foreground">No services found in this category.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Trust Stats Footer */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-8 border-t">
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-full bg-yellow-100 text-yellow-600">
+            <Star className="h-6 w-6 fill-current" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold">4.8</p>
+            <p className="text-sm text-muted-foreground">Service Rating</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="p-3 rounded-full bg-blue-100 text-blue-600">
+            <Users className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold">12M+</p>
+            <p className="text-sm text-muted-foreground">Customers Globally</p>
+          </div>
+        </div>
+        <div className="hidden md:flex items-center gap-3">
+          <div className="p-3 rounded-full bg-green-100 text-green-600">
+            <Shield className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold">100%</p>
+            <p className="text-sm text-muted-foreground">Verified Pros</p>
+          </div>
+        </div>
+        <div className="hidden md:flex items-center gap-3">
+          <div className="p-3 rounded-full bg-purple-100 text-purple-600">
+            <Clock className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold">24/7</p>
+            <p className="text-sm text-muted-foreground">Support</p>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

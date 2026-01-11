@@ -20,6 +20,7 @@ export type TechnicianRanking = {
   technicianId: string
   technicianServiceId: string
   technicianName: string
+  customPrice?: number
   rankingFactors: RankingFactors
   reason: string
 }

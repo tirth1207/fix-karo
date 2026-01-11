@@ -29,10 +29,10 @@ export default async function BrowseServicesPage() {
     <div className="min-h-screen bg-background">
       {/* <CustomerNav /> */}
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
+        {/* <div className="mb-8">
           <h1 className="text-3xl font-bold">Find Services</h1>
           <p className="text-muted-foreground">Search for services by category or describe your problem</p>
-        </div>
+        </div> */}
 
         <ServiceDiscovery
           categories={categories || []}

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -12,10 +11,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
-import { CalendarIcon, Sparkles, CheckCircle2 } from "lucide-react"
+import { CalendarIcon, Sparkles, CheckCircle2, MapPin, Loader2 } from "lucide-react"
 import { format } from "date-fns"
 import { createClient } from "@/lib/supabase/client"
 import { autoAssignTechnician } from "@/app/actions/assignment-actions"
+import { updateProfileLocation } from "@/app/actions/location-actions"
+import { toast } from "sonner"
 
 interface SmartBookingFormProps {
   customerProfile: any
@@ -38,6 +39,39 @@ export function SmartBookingForm({ customerProfile, preselectedService }: SmartB
   const [zipCode, setZipCode] = useState<string>(customerProfile?.zip_code || "")
   const [notes, setNotes] = useState<string>("")
 
+  // Location state
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(
+    customerProfile?.latitude && customerProfile?.longitude
+      ? { lat: customerProfile.latitude, lng: customerProfile.longitude }
+      : null
+  )
+  const [locationLoading, setLocationLoading] = useState(false)
+
+  const handleUseMyLocation = () => {
+    setLocationLoading(true)
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords
+          setCoordinates({ lat: latitude, lng: longitude })
+
+          // Optionally reverse geocode here to fill address fields if empty
+          // For now, just setting coordinates
+          toast.success("Location detected!")
+          setLocationLoading(false)
+        },
+        (error) => {
+          console.error("Error getting location:", error)
+          toast.error("Could not get your location. Please ensure location services are enabled.")
+          setLocationLoading(false)
+        }
+      )
+    } else {
+      toast.error("Geolocation is not supported by your browser")
+      setLocationLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -49,23 +83,39 @@ export function SmartBookingForm({ customerProfile, preselectedService }: SmartB
       return
     }
 
+    if (!coordinates) {
+      setError("Please provide your location so we can find the nearest technician.")
+      setLoading(false)
+      return
+    }
+
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser()
       if (!user) throw new Error("Not authenticated")
 
-      // Combine date and time
+      // 1. Update Profile Location first
+      await updateProfileLocation(coordinates.lat, coordinates.lng)
+
+      // 2. Combine date and time
       const [hours, minutes] = time.split(":")
       const scheduledDate = new Date(date)
       scheduledDate.setHours(Number.parseInt(hours), Number.parseInt(minutes))
 
-      // Create booking with auto-assignment
+      // 3. Create booking with auto-assignment
+      // Ensure we have a technician_service_id. If preselectedService is just a generic service, 
+      // we need to handle that. 
+      // Current assumption: preselectedService IS a technician_service (passed from page).
+      // We will update page.tsx to find *any* valid technician_service for the generic service 
+      // to satisfy the foreign key, OR update the schema.
+      // For now, sticking to the existing flow where page passes a tech_service.
+
       const { data: booking, error: bookingError } = await supabase
         .from("bookings")
         .insert({
           customer_id: user.id,
-          technician_id: preselectedService?.technician_id, // temporary - will be updated by auto-assign
+          technician_id: preselectedService?.technician_id,
           service_id: preselectedService?.id,
           scheduled_date: scheduledDate.toISOString(),
           estimated_duration_minutes: preselectedService?.service?.estimated_duration_minutes || 60,
@@ -74,7 +124,7 @@ export function SmartBookingForm({ customerProfile, preselectedService }: SmartB
           service_state: state,
           service_zip_code: zipCode,
           customer_notes: notes || null,
-          total_amount: preselectedService?.custom_price,
+          total_amount: preselectedService?.custom_price || 0,
           status: "pending",
         })
         .select()
@@ -84,7 +134,7 @@ export function SmartBookingForm({ customerProfile, preselectedService }: SmartB
 
       setBookingCreated(true)
 
-      // Trigger auto-assignment
+      // 4. Trigger auto-assignment
       const assignResult = await autoAssignTechnician(booking.id)
 
       if (assignResult.error) {
@@ -132,15 +182,9 @@ export function SmartBookingForm({ customerProfile, preselectedService }: SmartB
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Skill Match:</span>
+                  <span className="text-muted-foreground">Distance:</span>
                   <span className="font-medium">
-                    {assignmentResult.assignedTechnician.rankingFactors.skillMatchScore.toFixed(0)}%
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Availability:</span>
-                  <span className="font-medium">
-                    {assignmentResult.assignedTechnician.rankingFactors.workloadBalanceScore.toFixed(0)}%
+                    {assignmentResult.assignedTechnician.rankingFactors.distance.toFixed(1)} km
                   </span>
                 </div>
                 {assignmentResult.assignedTechnician.rankingFactors.isPreferred && (
@@ -165,7 +209,7 @@ export function SmartBookingForm({ customerProfile, preselectedService }: SmartB
       <CardHeader>
         <CardTitle>Service Details</CardTitle>
         <CardDescription>
-          We'll automatically match you with the best available technician using our smart assignment algorithm
+          We'll automatically match you with the best available technician based on your location.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -177,10 +221,8 @@ export function SmartBookingForm({ customerProfile, preselectedService }: SmartB
               <h4 className="font-semibold mb-2">{preselectedService.service?.name}</h4>
               <p className="text-sm text-muted-foreground mb-2">{preselectedService.service?.description}</p>
               <div className="flex items-center justify-between">
-                <span className="text-sm">
-                  Selected Technician: {preselectedService.technician?.profile?.full_name}
-                </span>
-                <span className="text-lg font-bold text-primary">${preselectedService.custom_price}</span>
+                <span className="text-sm italic text-muted-foreground">Finding best match...</span>
+                <span className="text-lg font-bold text-primary">${preselectedService.custom_price || preselectedService.service?.base_price}</span>
               </div>
             </div>
           )}
@@ -210,7 +252,24 @@ export function SmartBookingForm({ customerProfile, preselectedService }: SmartB
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="address">Service Address *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="address">Service Address *</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 text-primary"
+                onClick={handleUseMyLocation}
+                disabled={locationLoading}
+              >
+                {locationLoading ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <MapPin className="h-3 w-3 mr-1" />
+                )}
+                Use my location
+              </Button>
+            </div>
             <Input
               id="address"
               placeholder="123 Main St"
@@ -218,6 +277,12 @@ export function SmartBookingForm({ customerProfile, preselectedService }: SmartB
               onChange={(e) => setAddress(e.target.value)}
               required
             />
+            {coordinates && (
+              <p className="text-xs text-green-600 flex items-center mt-1">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Coordinates set ({coordinates.lat.toFixed(4)}, {coordinates.lng.toFixed(4)})
+              </p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -248,7 +313,7 @@ export function SmartBookingForm({ customerProfile, preselectedService }: SmartB
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating booking..." : "Book with Smart Assignment"}
+            {loading ? "Matching Technician..." : "Find Technician & Book"}
           </Button>
         </form>
       </CardContent>

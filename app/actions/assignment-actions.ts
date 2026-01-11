@@ -21,7 +21,7 @@ export async function autoAssignTechnician(bookingId: string) {
   } = await supabase.auth.getUser()
   if (!user) return { error: "Unauthorized" }
 
-  // Get booking details
+  // Get booking details and customer profile for coordinates
   const { data: booking, error: bookingError } = await supabase
     .from("bookings")
     .select(
@@ -30,7 +30,8 @@ export async function autoAssignTechnician(bookingId: string) {
       service:technician_services(
         service_id,
         service:services(category_id, emergency_supported)
-      )
+      ),
+      customer:profiles!bookings_customer_id_fkey(latitude, longitude)
     `,
     )
     .eq("id", bookingId)
@@ -38,19 +39,26 @@ export async function autoAssignTechnician(bookingId: string) {
 
   if (bookingError || !booking) return { error: "Booking not found" }
 
+  // Use customer's current location from profile, fallback to 0 if missing (should be captured in form)
+  const customerLat = booking.customer?.latitude || 0
+  const customerLng = booking.customer?.longitude || 0
+
+  if (customerLat === 0 || customerLng === 0) {
+    console.warn("Customer coordinates missing for auto-assignment. Distance calculation will be inaccurate.")
+  }
+
   // Get all technicians offering this service
-  const { data: technicianServices } = await supabase
+  const { data: technicianServices, error: techServiceError } = await supabase
     .from("technician_services")
     .select(
       `
       *,
       technician:technician_profiles(
         id,
-        rating,
         total_reviews,
         total_jobs_completed,
         verification_status,
-        profile:profiles(full_name, city, state)
+        profile:profiles!technician_profiles_id_fkey(id, full_name, city, state, latitude, longitude)
       )
     `,
     )
@@ -58,17 +66,24 @@ export async function autoAssignTechnician(bookingId: string) {
     .eq("is_active", true)
     .eq("approval_status", "approved")
 
-  if (!technicianServices || technicianServices.length === 0) {
-    return { error: "No available technicians for this service" }
+  if (techServiceError) {
+    console.error("Tech service fetch error:", techServiceError)
   }
 
-  // Filter verified technicians in same city/state
+  console.log("Found technician services:", technicianServices?.length)
+  console.log("Full Technician Services dump:", JSON.stringify(technicianServices, null, 2))
+
+  if (!technicianServices || technicianServices.length === 0) {
+    return { error: `No available technicians for this service (Service ID: ${booking.service?.service_id})` }
+  }
+
+  // Filter verified technicians (relaxed city/state check to allow distance-based matching across boundaries)
   const eligibleTechs = technicianServices.filter(
     (ts: any) =>
-      ts.technician?.verification_status === "verified" &&
-      ts.technician?.profile?.city === booking.service_city &&
-      ts.technician?.profile?.state === booking.service_state,
+      ts.technician?.verification_status === "verified"
   )
+
+  console.log("Eligible technicians after filter:", eligibleTechs.length)
 
   if (eligibleTechs.length === 0) {
     return { error: "No verified technicians available in your area" }
@@ -126,7 +141,38 @@ export async function autoAssignTechnician(bookingId: string) {
         return null
       }
 
-      const distanceScore = 85 // placeholder - in production, use real distance
+      // Calculate Real Distance
+      const techLat = ts.technician?.profile?.latitude
+      const techLng = ts.technician?.profile?.longitude
+
+      console.log(`[Assign Debug] Tech ${techId}: Lat=${techLat}, Lng=${techLng}, CustLat=${customerLat}, CustLng=${customerLng}`)
+
+      let distanceKm = 1000 // default high distance
+      if (techLat !== 0 && techLng !== 0 && customerLat !== 0 && customerLng !== 0) {
+        // You might need to import calculateHaversineDistance if not already imported
+        // Assuming it's available or inline it here for server action
+        const R = 6371; // Radius of the earth in km
+        const dLat = (techLat - customerLat) * (Math.PI / 180);
+        const dLon = (techLng - customerLng) * (Math.PI / 180);
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(customerLat * (Math.PI / 180)) * Math.cos(techLat * (Math.PI / 180)) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        distanceKm = R * c;
+      }
+
+      console.log(`[Assign Debug] Tech ${techId}: Distance=${distanceKm.toFixed(2)}km`)
+
+      const coverageRadius = ts.coverage_radius_km || 50
+      if (distanceKm > coverageRadius) {
+        console.log(`[Assign Debug] Tech ${techId} rejected. Distance ${distanceKm.toFixed(2)} > Radius ${coverageRadius}`)
+        return null // Technician too far
+      }
+
+      // Calculate Distance Score (0 to 100, where 0km = 100, maxRadius = 0)
+      const distanceScore = Math.max(0, 100 * (1 - distanceKm / coverageRadius))
+
       const skillMatchScore = calculateSkillMatchScore(
         ts.experience_level || "intermediate",
         techCompletedBookings,
@@ -137,7 +183,7 @@ export async function autoAssignTechnician(bookingId: string) {
       const workloadBalanceScore = calculateWorkloadScore(techActiveBookings)
 
       const factors: RankingFactors = {
-        distance: 5, // km
+        distance: distanceKm,
         distanceScore,
         skillMatch: skillMatchScore,
         skillMatchScore,
@@ -160,6 +206,7 @@ export async function autoAssignTechnician(bookingId: string) {
         technicianId: techId,
         technicianServiceId: ts.id,
         technicianName: ts.technician?.profile?.full_name || "Unknown",
+        customPrice: ts.custom_price, // Needed for price update
         rankingFactors: factors,
         reason: "",
       }
@@ -178,7 +225,7 @@ export async function autoAssignTechnician(bookingId: string) {
     })
 
   if (rankings.length === 0) {
-    return { error: "No suitable technicians available" }
+    return { error: "No suitable technicians available within range" }
   }
 
   const bestMatch = rankings[0]
@@ -197,16 +244,16 @@ export async function autoAssignTechnician(bookingId: string) {
     console.error("[v0] Failed to log assignment:", logError)
   }
 
-  // Update booking with assigned technician
+  // Update booking with assigned technician and their price
   const { error: updateError } = await supabase
     .from("bookings")
     .update({
       technician_id: bestMatch.technicianId,
-      status: "confirmed",
+      total_amount: bestMatch.customPrice || booking.total_amount, // Update price to match assigned tech
       updated_at: new Date().toISOString(),
     })
     .eq("id", bookingId)
-
+  console.log("[v0] Updated booking:", updateError)
   if (updateError) return { error: updateError.message }
 
   revalidatePath("/dashboard/customer")
