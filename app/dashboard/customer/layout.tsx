@@ -1,5 +1,6 @@
 import { getCustomerProfile, isProfileComplete } from "@/lib/customerProfileService";
 import { CustomerProfileGuardClient } from "@/lib/CustomerProfileGuardClient";
+import { CustomerDashboardShell } from "@/components/dashboard-shells";
 
 export default async function CustomerDashboardLayout({
     children,
@@ -7,16 +8,12 @@ export default async function CustomerDashboardLayout({
     children: React.ReactNode;
 }) {
     const profile = await getCustomerProfile();
-
-    // We check completeness on the server
-    // If no profile (guest), we consider it incomplete for the guard purposes 
-    // (though auth middleware usually handles session enforcement)
     const complete = profile ? isProfileComplete(profile) : false;
 
     return (
-        <>
+        <CustomerDashboardShell>
             <CustomerProfileGuardClient isComplete={complete} />
             {children}
-        </>
+        </CustomerDashboardShell>
     );
 }

@@ -42,7 +42,7 @@ export default async function AddTechnicianServicePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <TechnicianNav />
+      {/* <TechnicianNav /> */}
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <h1 className="text-3xl font-bold text-foreground mb-8">Add Service to Your Offerings</h1>
         <TechnicianServiceForm services={services} />

@@ -69,7 +69,7 @@ export default async function BookPage({ searchParams }: BookPageProps) {
 
   return (
     <div className="flex min-h-svh flex-col bg-muted/30">
-      <CustomerNav />
+      {/* <CustomerNav /> */}
 
       <main className="flex-1 pb-12">
         {/* Breadcrumbs */}

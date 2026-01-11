@@ -24,7 +24,7 @@ export default async function PreferredTechniciansPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <CustomerNav />
+      {/* <CustomerNav /> */}
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground">My Preferred Technicians</h1>

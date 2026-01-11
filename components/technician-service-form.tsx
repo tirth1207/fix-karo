@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
 import { addTechnicianService, updateTechnicianService } from "@/app/actions/technician-service-actions"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Info, DollarSign, MapPin, Briefcase } from "lucide-react"
 
 interface TechnicianServiceFormProps {
   services: any[]
@@ -86,176 +86,200 @@ export function TechnicianServiceForm({ services, technicianService }: Technicia
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{isEditing ? "Edit Service" : "Service Details"}</CardTitle>
+    <Card className="border shadow-md">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl font-bold">{isEditing ? "Edit Service" : "Service Details"}</CardTitle>
         <CardDescription>
           {isEditing
-            ? "Update your service details and pricing."
-            : "Select a service and set your pricing within platform bounds"}
+            ? "Update your service details and pricing below."
+            : "Configure a new service to offer on the platform."}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-8">
           {error && (
-            <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
               <span>{error}</span>
             </div>
           )}
 
           {!isEditing && services.length === 0 && (
-            <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800">
-              You've already added all available services. Check back later for new service offerings.
+            <div className="rounded-md bg-amber-500/10 p-3 text-sm text-amber-600 flex items-center gap-2">
+              <Info className="h-4 w-4" />
+              <span>You've already added all available services. Check back later.</span>
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="service">Select Service *</Label>
-            <Select
-              value={formData.service_id}
-              onValueChange={handleServiceSelect}
-              required
-              disabled={isEditing}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose a service to offer" />
-              </SelectTrigger>
-              <SelectContent>
-                {services.map((service) => (
-                  <SelectItem key={service.id} value={service.id}>
-                    {service.name} - {service.category?.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {isEditing && (
-              <p className="text-xs text-muted-foreground">Service type cannot be changed once added.</p>
-            )}
-          </div>
-
-          {selectedService && (
-            <div className="p-4 rounded-lg bg-blue-50 border border-blue-200">
-              <h4 className="font-semibold mb-2">{selectedService.name}</h4>
-              <p className="text-sm text-muted-foreground mb-3">{selectedService.description}</p>
-              <div className="grid gap-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Platform Base Price:</span>
-                  <span className="font-medium">${selectedService.base_price}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Allowed Price Range:</span>
-                  <span className="font-medium">
-                    ${selectedService.min_price} - ${selectedService.max_price}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Est. Duration:</span>
-                  <span className="font-medium">{selectedService.estimated_duration_minutes} minutes</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Warranty:</span>
-                  <span className="font-medium">{selectedService.warranty_days} days</span>
-                </div>
-                {selectedService.emergency_supported && (
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                      Emergency Service Available
-                    </Badge>
-                  </div>
-                )}
-              </div>
+          <div className="grid gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="service">Select Service</Label>
+              <Select
+                value={formData.service_id}
+                onValueChange={handleServiceSelect}
+                required
+                disabled={isEditing}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Choose a service to offer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((service) => (
+                    <SelectItem key={service.id} value={service.id}>
+                      {service.name} <span className="text-muted-foreground ml-2">({service.category?.name})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isEditing && (
+                <p className="text-[0.8rem] text-muted-foreground">Service type cannot be modified once created.</p>
+              )}
             </div>
-          )}
 
-          <div className="space-y-2">
-            <Label htmlFor="price">Your Price ($) *</Label>
-            <Input
-              id="price"
-              type="number"
-              step="0.01"
-              value={formData.custom_price}
-              onChange={(e) => setFormData({ ...formData, custom_price: e.target.value })}
-              placeholder={
-                selectedService
-                  ? `Between $${selectedService.min_price} and $${selectedService.max_price}`
-                  : "Select a service first"
-              }
-              required
-              disabled={!selectedService}
-            />
             {selectedService && (
-              <p className="text-sm text-muted-foreground">
-                Must be between ${selectedService.min_price} and ${selectedService.max_price}
-              </p>
+              <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h4 className="font-semibold">{selectedService.name}</h4>
+                    <p className="text-sm text-muted-foreground">{selectedService.description}</p>
+                  </div>
+                  {selectedService.emergency_supported && (
+                    <Badge variant="outline" className="border-red-200 text-red-700 bg-red-50">
+                      Emergency
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Base Price</span>
+                    <p className="font-medium flex items-center gap-1">
+                      <DollarSign className="h-3 w-3" />
+                      {selectedService.base_price}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Range</span>
+                    <p className="font-medium">${selectedService.min_price} - ${selectedService.max_price}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Duration</span>
+                    <p className="font-medium">{selectedService.estimated_duration_minutes} mins</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wider">Warranty</span>
+                    <p className="font-medium">{selectedService.warranty_days} days</p>
+                  </div>
+                </div>
+              </div>
             )}
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="radius">Coverage Radius (km) *</Label>
-            <Input
-              id="radius"
-              type="number"
-              min="1"
-              max="100"
-              value={formData.coverage_radius_km}
-              onChange={(e) => setFormData({ ...formData, coverage_radius_km: e.target.value })}
-              required
-            />
-            <p className="text-sm text-muted-foreground">
-              How far are you willing to travel for this service? (Max: 100km)
-            </p>
-          </div>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="price">Your Price ($)</Label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    className="pl-9"
+                    value={formData.custom_price}
+                    onChange={(e) => setFormData({ ...formData, custom_price: e.target.value })}
+                    placeholder="0.00"
+                    required
+                    disabled={!selectedService}
+                  />
+                </div>
+                <p className="text-[0.8rem] text-muted-foreground">
+                  Set your rate within the allowed platform range.
+                </p>
+              </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="experience">Your Experience Level *</Label>
-            <Select
-              value={formData.experience_level}
-              onValueChange={(value) => setFormData({ ...formData, experience_level: value })}
-              required
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="beginner">Beginner (0-2 years)</SelectItem>
-                <SelectItem value="intermediate">Intermediate (2-5 years)</SelectItem>
-                <SelectItem value="expert">Expert (5+ years)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {isEditing && (
-            <div className="flex items-center space-x-2 border p-4 rounded-md">
-              <Switch
-                id="is_active"
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-              />
-              <div className="space-y-1">
-                <Label htmlFor="is_active">Active Status</Label>
-                <p className="text-sm text-muted-foreground">
-                  Turn this off if you want to temporarily stop offering this service without deleting it.
+              <div className="space-y-2">
+                <Label htmlFor="radius">Coverage Radius (km)</Label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="radius"
+                    type="number"
+                    min="1"
+                    max="100"
+                    className="pl-9"
+                    value={formData.coverage_radius_km}
+                    onChange={(e) => setFormData({ ...formData, coverage_radius_km: e.target.value })}
+                    required
+                  />
+                </div>
+                <p className="text-[0.8rem] text-muted-foreground">
+                  Max distance: 100km
                 </p>
               </div>
             </div>
-          )}
 
-          {!isEditing && (
-            <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
-              <p className="text-sm text-yellow-800">
-                <strong>Note:</strong> Your service will be pending admin approval before it becomes active. This usually
-                takes 1-2 business days.
-              </p>
+            <div className="space-y-2">
+              <Label htmlFor="experience">Experience Level</Label>
+              <Select
+                value={formData.experience_level}
+                onValueChange={(value) => setFormData({ ...formData, experience_level: value })}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beginner">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                      <span>Beginner (0-2 years)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="intermediate">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4 text-primary" />
+                      <span>Intermediate (2-5 years)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="expert">
+                    <div className="flex items-center gap-2">
+                      <Briefcase className="h-4 w-4 text-amber-500" />
+                      <span>Expert (5+ years)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
 
-          <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={loading || !selectedService || (!isEditing && services.length === 0)} className="flex-1">
-              {loading ? (isEditing ? "Updating..." : "Adding...") : (isEditing ? "Update Service" : "Add Service")}
-            </Button>
+            {isEditing && (
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <Label htmlFor="is_active" className="text-base">Active Status</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Turn off to temporarily hide this service.
+                  </p>
+                </div>
+                <Switch
+                  id="is_active"
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                />
+              </div>
+            )}
+
+            {!isEditing && (
+              <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                <span>New services require admin approval (1-2 business days).</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-4 pt-4">
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
               Cancel
+            </Button>
+            <Button type="submit" disabled={loading || !selectedService || (!isEditing && services.length === 0)} className="flex-1">
+              {loading ? (isEditing ? "Updating Service..." : "Adding Service...") : (isEditing ? "Save Changes" : "Submit Service")}
             </Button>
           </div>
         </form>

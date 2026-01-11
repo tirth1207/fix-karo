@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,6 +11,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import type { UserRole } from "@/lib/types"
+import { Shield } from "lucide-react"
 
 export default function SignUpPage() {
     const [email, setEmail] = useState("")
@@ -52,77 +52,84 @@ export default function SignUpPage() {
     }
 
     return (
-        <div className="flex min-h-svh w-full items-center justify-center p-6 md:p-10">
-            <div className="w-full max-w-sm">
-                <div className="flex flex-col gap-6">
-                    <Card className="border-border/50">
-                        <CardHeader>
-                            <CardTitle className="text-2xl">Create an account</CardTitle>
-                            <CardDescription>Join as a customer or technician</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <form onSubmit={handleSignUp}>
-                                <div className="flex flex-col gap-6">
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="fullName">Full Name</Label>
-                                        <Input
-                                            id="fullName"
-                                            type="text"
-                                            placeholder="John Doe"
-                                            required
-                                            value={fullName}
-                                            onChange={(e) => setFullName(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="email">Email</Label>
-                                        <Input
-                                            id="email"
-                                            type="email"
-                                            placeholder="you@example.com"
-                                            required
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="password">Password</Label>
-                                        <Input
-                                            id="password"
-                                            type="password"
-                                            required
-                                            minLength={6}
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="grid gap-2">
-                                        <Label htmlFor="role">I want to</Label>
-                                        <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
-                                            <SelectTrigger>
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="customer">Book services (Customer)</SelectItem>
-                                                <SelectItem value="technician">Offer services (Technician)</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    {error && <p className="text-sm text-destructive">{error}</p>}
-                                    <Button type="submit" className="w-full" disabled={isLoading}>
-                                        {isLoading ? "Creating account..." : "Sign up"}
-                                    </Button>
-                                </div>
-                                <div className="mt-4 text-center text-sm">
-                                    Already have an account?{" "}
-                                    <Link href="/auth/login" className="underline underline-offset-4">
-                                        Sign in
-                                    </Link>
-                                </div>
-                            </form>
-                        </CardContent>
-                    </Card>
-                </div>
+        <div className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-background to-muted p-6 md:p-10">
+            <div className="absolute top-8 left-8">
+                <Link href="/" className="flex items-center gap-2 font-semibold">
+                    <div className="bg-primary/10 text-primary flex h-8 w-8 items-center justify-center rounded-lg">
+                        <Shield className="h-5 w-5" />
+                    </div>
+                    <span className="text-lg tracking-tight">ServicePro</span>
+                </Link>
+            </div>
+            <div className="w-full max-w-sm md:max-w-md animate-fade-in">
+                <Card className="border-border shadow-lg">
+                    <CardHeader className="space-y-1 text-center">
+                        <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
+                        <CardDescription>Join our platform as a customer or skilled technician</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleSignUp} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="fullName">Full Name</Label>
+                                <Input
+                                    id="fullName"
+                                    type="text"
+                                    placeholder="John Doe"
+                                    required
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    className="bg-background"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="name@example.com"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="bg-background"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="password">Password</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    required
+                                    minLength={6}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="bg-background"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="role">I want to</Label>
+                                <Select value={role} onValueChange={(value) => setRole(value as UserRole)}>
+                                    <SelectTrigger className="bg-background">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="customer">Book services (Customer)</SelectItem>
+                                        <SelectItem value="technician">Offer services (Technician)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {error && <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">{error}</div>}
+                            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                                {isLoading ? "Creating account..." : "Sign up"}
+                            </Button>
+                        </form>
+                        <div className="mt-6 text-center text-sm text-muted-foreground">
+                            Already have an account?{" "}
+                            <Link href="/auth/login" className="font-medium text-primary hover:underline">
+                                Sign in
+                            </Link>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     )

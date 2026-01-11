@@ -30,7 +30,7 @@ export default async function TechnicianBookingsPage() {
   if (!techProfile) redirect("/dashboard/technician/onboarding")
 
   // Fetch all bookings
-  const { data: bookings,error } = await supabase
+  const { data: bookings, error } = await supabase
     .from("bookings")
     .select(
       `
@@ -107,7 +107,7 @@ export default async function TechnicianBookingsPage() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <TechnicianNav />
+      {/* <TechnicianNav /> */}
 
       <main className="flex-1 bg-muted/50">
         <div className="container mx-auto px-4 py-8">

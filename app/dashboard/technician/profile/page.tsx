@@ -6,21 +6,21 @@ import { redirect } from 'next/navigation'
 import React from 'react'
 
 export default async function TechnicianProfilesPage() {
-    const supabase = await createServerClient()
+  const supabase = await createServerClient()
 
-    const {
+  const {
     data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) redirect("/auth/login")
+  } = await supabase.auth.getUser()
+  if (!user) redirect("/auth/login")
 
-    const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
-    if (profile?.role !== "technician") redirect("/dashboard/customer")
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (profile?.role !== "technician") redirect("/dashboard/customer")
 
-    // Verify the technician profile exists; otherwise require onboarding
-    const { data: techProfile } = await supabase.from("technician_profiles").select("id").eq("id", user.id).single()
-    if (!techProfile) redirect("/dashboard/technician/onboarding")
+  // Verify the technician profile exists; otherwise require onboarding
+  const { data: techProfile } = await supabase.from("technician_profiles").select("id").eq("id", user.id).single()
+  if (!techProfile) redirect("/dashboard/technician/onboarding")
 
-   const { data: technicians, error } = await supabase
+  const { data: technicians, error } = await supabase
     .from("technician_profiles")
     .select(
       `
@@ -42,14 +42,14 @@ export default async function TechnicianProfilesPage() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <TechnicianNav />
+      {/* <TechnicianNav /> */}
 
       <main className="flex-1 bg-muted/50">
         <div className="container mx-auto px-4 py-8">
           <div className="mb-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-bold text-primary">
-                {tech?.profile?.full_name ? tech.profile.full_name.split(" ").map((s: string) => s[0]).slice(0,2).join("") : "T"}
+                {tech?.profile?.full_name ? tech.profile.full_name.split(" ").map((s: string) => s[0]).slice(0, 2).join("") : "T"}
               </div>
               <div>
                 <h1 className="text-2xl font-bold">{tech?.profile?.full_name}</h1>

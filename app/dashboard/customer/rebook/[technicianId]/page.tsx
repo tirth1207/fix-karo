@@ -59,7 +59,7 @@ export default async function RebookPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <CustomerNav />
+      {/* <CustomerNav /> */}
       <main className="container mx-auto px-4 py-8 max-w-4xl">
         <h1 className="text-3xl font-bold text-foreground mb-2">Rebook Service</h1>
         <p className="text-muted-foreground mb-8">Book another appointment with {technician.profile?.full_name}</p>
