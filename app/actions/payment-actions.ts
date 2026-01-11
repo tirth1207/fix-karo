@@ -59,6 +59,7 @@ export async function createPaymentRecord(
 
     return { success: true, payment, alreadyExists: false }
   } catch (error: any) {
+    console.log("[v0] Payment creation error:", error)
     console.error("[v0] Payment creation error:", error.message)
     return { success: false, error: error.message }
   }

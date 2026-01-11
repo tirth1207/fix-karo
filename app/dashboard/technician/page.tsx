@@ -35,7 +35,14 @@ export default async function TechnicianDashboardPage() {
   }
 
   // Fetch technician profile
-  const { data: techProfile } = await supabase.from("technician_profiles").select("*").eq("id", user.id).single()
+  const { data: techProfile,error } = await supabase.from("technician_profiles").select("*").eq("id", user.id).single()
+  if (error) {
+    console.error("Failed to fetch technician_profiles:", error)
+  }
+  // If user is a technician but has not completed onboarding, force completion
+  if (!techProfile) {
+    redirect("/dashboard/technician/onboarding")
+  }
 
   // Fetch bookings
   const { data: bookings } = await supabase

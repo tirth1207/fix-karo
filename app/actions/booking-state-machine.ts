@@ -59,14 +59,13 @@ export async function transitionBookingStatus(
         if (!isTechnician) throw new Error("Only technicians can confirm bookings")
         break
 
-      case "technician_en_route":
-        // Only technicians, requires OTP verification
+      case "technician_en_route": {
         if (!isTechnician) throw new Error("Unauthorized")
-        if (metadata?.otpCode) {
-          const otpValid = await verifyOTP(bookingId, user.id, metadata.otpCode, "job_start")
-          if (!otpValid) throw new Error("Invalid OTP code")
-        }
+        if (!metadata?.otpCode) throw new Error("OTP code is required to start the job")
+        const otpValid = await verifyOTP(bookingId, user.id, metadata.otpCode, "job_start")
+        if (!otpValid) throw new Error("Invalid OTP code")
         break
+      }
 
       case "in_progress":
         // Only technicians
@@ -74,15 +73,14 @@ export async function transitionBookingStatus(
         updateData.actual_start_time = new Date().toISOString()
         break
 
-      case "awaiting_customer_confirmation":
-        // Only technicians, requires OTP
+      case "awaiting_customer_confirmation": {
         if (!isTechnician) throw new Error("Unauthorized")
-        if (metadata?.otpCode) {
-          const otpValid = await verifyOTP(bookingId, user.id, metadata.otpCode, "job_completion")
-          if (!otpValid) throw new Error("Invalid OTP code for completion")
-        }
+        if (!metadata?.otpCode) throw new Error("OTP code is required to complete the job")
+        const otpValid = await verifyOTP(bookingId, user.id, metadata.otpCode, "job_completion")
+        if (!otpValid) throw new Error("Invalid OTP code for completion")
         updateData.actual_end_time = new Date().toISOString()
         break
+      }
 
       case "completed":
         // Customer or admin can approve completion
@@ -170,11 +168,22 @@ async function verifyOTP(
   if (!otp || otp.otp_code !== otpCode) {
     // Increment attempts
     if (otp) {
+      const newAttempts = otp.attempts + 1
       await supabase
         .from("otp_verifications")
-        .update({ attempts: otp.attempts + 1 })
+        .update({ attempts: newAttempts })
         .eq("id", otp.id)
+
+      if (newAttempts >= 3) {
+        // Log potential abuse
+        console.warn(`[OTP Abuse] User ${userId} exceeded attempts for booking ${bookingId}`)
+      }
     }
+    return false
+  }
+
+  // Check if max attempts reached
+  if (otp.attempts >= 3) {
     return false
   }
 
@@ -196,6 +205,25 @@ export async function generateOTP(bookingId: string, otpType: "job_start" | "job
     } = await supabase.auth.getUser()
     if (!user) throw new Error("Not authenticated")
 
+    // Check for resend cooldown (30s)
+    const { data: recentOtp } = await supabase
+      .from("otp_verifications")
+      .select("created_at")
+      .eq("user_id", user.id)
+      .eq("booking_id", bookingId)
+      .eq("otp_type", otpType)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
+
+    if (recentOtp) {
+      const lastSent = new Date(recentOtp.created_at).getTime()
+      const now = Date.now()
+      if (now - lastSent < 30 * 1000) {
+        throw new Error("Please wait 30 seconds before requesting a new OTP")
+      }
+    }
+
     // Generate 6-digit OTP
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString()
 
@@ -213,8 +241,10 @@ export async function generateOTP(bookingId: string, otpType: "job_start" | "job
     if (error) throw error
 
     // In production, send via SMS/email
-    // For MVP, return the code (would be sent via notification)
-    return { success: true, otp: otpCode }
+    console.log(`[SMS Gateway Placeholder] Sending OTP ${otpCode} to user ${user.id} for booking ${bookingId}`)
+
+    // For security, do not return the OTP code to the client
+    return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }
   }

@@ -26,15 +26,20 @@ export default async function TechniciansManagementPage() {
   }
 
   // Fetch all technicians
-  const { data: technicians } = await supabase
+  const { data: technicians, error } = await supabase
     .from("technician_profiles")
     .select(
       `
       *,
-      profile:profiles(full_name, email, phone, city, state)
+      profile:profiles!technician_profiles_id_fkey(full_name, email, phone, city, state, zip_code)
     `,
     )
     .order("created_at", { ascending: false })
+
+  // Log both data and any error for debugging RLS/permission issues
+  if (error) {
+    console.error("Failed to fetch technician_profiles:", error)
+  }
 
   const pendingTechnicians = technicians?.filter((t) => t.verification_status === "pending")
   const verifiedTechnicians = technicians?.filter((t) => t.verification_status === "verified")

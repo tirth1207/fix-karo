@@ -15,6 +15,7 @@ export default async function BrowseServicesPage() {
   }
 
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  console.log(profile)
 
   // Fetch service categories
   const { data: categories } = await supabase
@@ -22,6 +23,7 @@ export default async function BrowseServicesPage() {
     .select("*")
     .eq("is_active", true)
     .order("display_order")
+  console.log(categories)
 
   return (
     <div className="min-h-screen bg-background">
@@ -36,6 +38,8 @@ export default async function BrowseServicesPage() {
           categories={categories || []}
           customerCity={profile?.city || ""}
           customerState={profile?.state || ""}
+          customerLatitude={profile?.latitude || "null"}
+          customerLongitude={profile?.longitude || "null"}
         />
       </main>
     </div>

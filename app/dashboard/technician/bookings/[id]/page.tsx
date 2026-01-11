@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Calendar, MapPin, Clock, Mail, Phone, AlertTriangle } from "lucide-react"
 import { BookingActions } from "@/components/booking-actions"
+import { JobPhotoUpload } from "@/components/job-photo-upload"
 
-export default async function BookingDetailsPage({ params }: { params: { id: string } }) {
+export default async function BookingDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
 
   const {
@@ -17,24 +18,34 @@ export default async function BookingDetailsPage({ params }: { params: { id: str
     redirect("/auth/login")
   }
 
+  // Verify role and onboarding completion
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+  if (profile?.role !== "technician") redirect("/")
+
+  const { data: techProfile } = await supabase.from("technician_profiles").select("id").eq("id", user.id).single()
+  if (!techProfile) redirect("/dashboard/technician/onboarding")
+
   const { id } = await params
 
   // Fetch booking details
-  const { data: booking } = await supabase
+  const { data: booking, error } = await supabase
     .from("bookings")
     .select(
       `
       *,
       customer:profiles!bookings_customer_id_fkey(full_name, phone, email, city, state),
-      service:technician_services(service_name, base_price, description, estimated_duration_minutes)
+      service:technician_services(service_id:services(name, base_price, description, estimated_duration_minutes), custom_price)
     `,
     )
     .eq("id", id)
     .eq("technician_id", user.id)
     .single()
-
+  if (error) {
+    console.error("Failed to fetch booking details:", error)
+  }
+  console.log(booking)
   if (!booking) {
-    notFound()
+    console.error("Booking not found or access denied")
   }
 
   // Fetch payment info
@@ -201,6 +212,8 @@ export default async function BookingDetailsPage({ params }: { params: { id: str
 
             {/* Customer info & actions */}
             <div className="space-y-6">
+              <JobPhotoUpload bookingId={booking.id} technicianId={user.id} />
+
               <Card>
                 <CardHeader>
                   <CardTitle>Customer Information</CardTitle>

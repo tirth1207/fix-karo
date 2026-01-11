@@ -17,6 +17,11 @@ import { format } from "date-fns"
 
 type Service = {
   id: string
+  service_id: {
+    name: string,
+    description: string,
+    base_price: number,
+  }
   service_name: string
   base_price: number
   estimated_duration_minutes: number
@@ -72,16 +77,16 @@ export function BookingForm({ technicianId, services }: { technicianId: string; 
         technician_id: technicianId,
         service_id: selectedService,
         scheduled_date: scheduledDate.toISOString(),
-        estimated_duration_minutes: service.estimated_duration_minutes || 60,
+        estimated_duration_minutes: service.estimated_duration_minutes,
         service_address: address,
         service_city: city,
         service_state: state,
         service_zip_code: zipCode,
         customer_notes: notes || null,
-        total_amount: service.base_price,
+        total_amount: service.service_id.base_price,
         status: "pending",
       })
-
+      console.log(bookingError)
       if (bookingError) throw bookingError
 
       router.push("/dashboard/customer?success=booking-created")
@@ -105,7 +110,7 @@ export function BookingForm({ technicianId, services }: { technicianId: string; 
           <SelectContent>
             {services.map((service) => (
               <SelectItem key={service.id} value={service.id}>
-                {service.service_name} - ${service.base_price}
+                {service.service_id.name} - ${service.service_id.base_price}
               </SelectItem>
             ))}
           </SelectContent>
@@ -178,7 +183,7 @@ export function BookingForm({ technicianId, services }: { technicianId: string; 
         <div className="rounded-lg border bg-muted/50 p-4">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Service fee</span>
-            <span className="font-medium">${selectedServiceData.base_price}</span>
+            <span className="font-medium">${selectedServiceData.service_id.base_price}</span>
           </div>
           <div className="mt-1 flex justify-between text-sm">
             <span className="text-muted-foreground">Estimated duration</span>

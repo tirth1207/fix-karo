@@ -9,6 +9,8 @@ export type MatchingCriteria = {
   customerLocation?: { lat: number; lng: number }
   emergencyFlag?: boolean
   preferredTechnicianId?: string
+  customerLatitude?: number
+  customerLongitude?: number
 }
 
 export type TechnicianMatch = {

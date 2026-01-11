@@ -62,13 +62,23 @@ CREATE POLICY tech_services_update ON public.technician_services
     auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'admin')
   );
 
--- Price audit logs: Admins only
+-- Price audit logs: Admins and Customer only
 DROP POLICY IF EXISTS price_audit_admin_only ON public.price_audit_logs;
 CREATE POLICY price_audit_admin_only ON public.price_audit_logs
   FOR ALL
   USING (auth.uid() IN (
     SELECT id FROM public.profiles WHERE role = 'admin'
   ));
+
+
+DROP POLICY IF EXISTS price_audit_customer_insert_only ON public.price_audit_logs;
+CREATE POLICY price_audit_customer_insert_only ON public.price_audit_logs
+  FOR INSERT
+  WITH CHECK (
+    auth.uid() IN (
+      SELECT id FROM public.profiles WHERE role = 'customer'
+    )
+  );
 
 -- Preferred technicians: Users see own, admins see all
 DROP POLICY IF EXISTS preferred_tech_select ON public.preferred_technicians;

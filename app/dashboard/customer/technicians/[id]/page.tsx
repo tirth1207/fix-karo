@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Star, MapPin, Clock, Shield, CheckCircle2 } from "lucide-react"
 import { BookingForm } from "@/components/booking-form"
 
-export default async function TechnicianProfilePage({ params }: { params: { id: string } }) {
+export default async function TechnicianProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient()
 
   const {
@@ -20,20 +20,26 @@ export default async function TechnicianProfilePage({ params }: { params: { id: 
   const { id } = await params
 
   // Fetch technician profile
-  const { data: technician } = await supabase
+  const { data: technician, error } = await supabase
     .from("technician_profiles")
-    .select(
-      `
+    .select(`
+    *,
+    profile:profiles!technician_profiles_id_fkey(
+      full_name, email, phone, city, state, zip_code
+    ),
+    services:technician_services(
       *,
-      profile:profiles(full_name, city, state, avatar_url, phone),
-      services:technician_services(*)
-    `,
+      service_id(*)
     )
+  `)
     .eq("id", id)
     .eq("verification_status", "verified")
     .eq("is_active", true)
     .single()
-
+  if (error) {
+    console.error("Failed to fetch technician profile:", error)
+  }
+  console.log(technician)
   if (!technician) {
     notFound()
   }

@@ -14,6 +14,10 @@ export default async function AddTechnicianServicePage() {
   const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
   if (profile?.role !== "technician") redirect("/dashboard/customer")
 
+  // Require onboarding completion
+  const { data: techProfile } = await supabase.from("technician_profiles").select("id").eq("id", user.id).single()
+  if (!techProfile) redirect("/dashboard/technician/onboarding")
+
   // Get all platform services that technician hasn't added yet
   const { data: myServiceIds } = await supabase
     .from("technician_services")

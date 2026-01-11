@@ -23,21 +23,22 @@ export default async function PaymentsManagementPage() {
   }
 
   // Fetch all payments
-  const { data: payments } = await supabase
+  const { data: payments, error } = await supabase
     .from("payments")
     .select(
       `
       *,
       booking:bookings(
         *,
-        service:technician_services(service_name)
+        service:technician_services(service_id:services(name))
       ),
       customer:profiles!payments_customer_id_fkey(full_name),
-      technician:technician_profiles(profile:profiles(full_name))
+      technician:technician_profiles(profile:profiles!technician_profiles_id_fkey(full_name,email))
     `,
     )
     .order("created_at", { ascending: false })
     .limit(50)
+  console.log(payments, error)
 
   const totalProcessed = payments?.reduce((sum, p) => sum + Number.parseFloat(p.amount || "0"), 0).toFixed(2) || "0.00"
 

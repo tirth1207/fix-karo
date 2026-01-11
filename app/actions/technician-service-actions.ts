@@ -1,5 +1,6 @@
 "use server"
 
+import { syncServiceCityAvailability } from "@/lib/service-availability-gen"
 import { createServerClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
@@ -17,12 +18,17 @@ export async function addTechnicianService(data: any) {
     return { error: "Technician access required" }
   }
 
-  // Check if technician is verified
+  // Check if technician profile exists and verification state
   const { data: techProfile } = await supabase
     .from("technician_profiles")
     .select("verification_status")
     .eq("id", user.id)
     .single()
+
+  // If profile is missing, require onboarding first
+  if (!techProfile) {
+    return { error: "Please complete your technician profile onboarding before adding services." }
+  }
 
   if (techProfile?.verification_status === "suspended") {
     return { error: "Your account is suspended. Cannot add services." }
@@ -55,8 +61,8 @@ export async function addTechnicianService(data: any) {
     is_active: false,
     approval_status: "pending",
   })
-
-  if (error) return { error: error.message }
+  const { error: syncError } = await syncServiceCityAvailability(user.id, data.service_id)
+  if (error || syncError) return { error: error?.message || syncError?.message }
 
   revalidatePath("/dashboard/technician/services")
   return { success: true }

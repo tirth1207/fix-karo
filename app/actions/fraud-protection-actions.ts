@@ -189,3 +189,46 @@ export async function reviewPriceDispute(
   revalidatePath("/admin/fraud")
   return { success: true }
 }
+
+export async function updateFraudAlert(
+  alertId: string,
+  status: "open" | "investigating" | "resolved" | "false_positive",
+  notes: string,
+) {
+  const supabase = await createServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: "Unauthorized" }
+
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+
+  if (profile?.role !== "admin") {
+    return { error: "Admin access required" }
+  }
+
+  const updateData: any = {
+    status,
+    resolution_notes: notes,
+  }
+
+  if (status === "resolved" || status === "false_positive") {
+    updateData.resolved_at = new Date().toISOString()
+  } else {
+    // If moving back to open or investigating, maybe clear resolved_at? 
+    // Usually it's better to keep history or handle it differently, but for an MVP simple clear is fine if it was mistakenly resolved.
+    updateData.resolved_at = null
+  }
+
+  const { error } = await supabase
+    .from("fraud_alerts")
+    .update(updateData)
+    .eq("id", alertId)
+
+  if (error) return { error: error.message }
+
+  revalidatePath(`/admin/fraud/alerts/${alertId}`)
+  revalidatePath("/admin/fraud")
+  return { success: true }
+}
