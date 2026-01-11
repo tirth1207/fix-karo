@@ -25,7 +25,7 @@ export default async function CustomerDashboardPage() {
   }
 
   // Fetch customer bookings
-  const { data: bookings,error } = await supabase
+  const { data: bookings, error } = await supabase
     .from("bookings")
     .select(
       `
@@ -40,6 +40,7 @@ export default async function CustomerDashboardPage() {
     .eq("customer_id", user.id)
     .order("scheduled_date", { ascending: false })
     .limit(10)
+  console.log(bookings)
   if (error) {
     console.error("Failed to fetch bookings:", error)
   }

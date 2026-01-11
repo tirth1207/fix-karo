@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { addTechnicianService } from "@/app/actions/technician-service-actions"
+import { Switch } from "@/components/ui/switch"
+import { addTechnicianService, updateTechnicianService } from "@/app/actions/technician-service-actions"
 import { AlertCircle } from "lucide-react"
 
 interface TechnicianServiceFormProps {
@@ -22,7 +23,12 @@ export function TechnicianServiceForm({ services, technicianService }: Technicia
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const [selectedService, setSelectedService] = useState<any>(null)
+  // Initialize selected service immediately if editing
+  const initialService = technicianService
+    ? services.find(s => s.id === technicianService.service_id)
+    : null
+
+  const [selectedService, setSelectedService] = useState<any>(initialService)
 
   const [formData, setFormData] = useState({
     service_id: technicianService?.service_id || "",
@@ -30,7 +36,11 @@ export function TechnicianServiceForm({ services, technicianService }: Technicia
     coverage_radius_km: technicianService?.coverage_radius_km || "25",
     experience_level: technicianService?.experience_level || "intermediate",
     tools_declared: technicianService?.tools_declared || [],
+    is_active: technicianService?.is_active ?? false, // Default to false for new services
   })
+
+  // Determine if we are in edit mode
+  const isEditing = !!technicianService
 
   const handleServiceSelect = (serviceId: string) => {
     const service = services.find((s) => s.id === serviceId)
@@ -54,7 +64,14 @@ export function TechnicianServiceForm({ services, technicianService }: Technicia
     }
 
     try {
-      const result = await addTechnicianService(formData)
+      let result
+
+      if (isEditing) {
+        result = await updateTechnicianService(technicianService.id, formData)
+      } else {
+        result = await addTechnicianService(formData)
+      }
+
       if (result.error) {
         setError(result.error)
       } else {
@@ -62,7 +79,7 @@ export function TechnicianServiceForm({ services, technicianService }: Technicia
         router.refresh()
       }
     } catch (err) {
-      setError("Failed to add service")
+      setError(isEditing ? "Failed to update service" : "Failed to add service")
     } finally {
       setLoading(false)
     }
@@ -71,8 +88,12 @@ export function TechnicianServiceForm({ services, technicianService }: Technicia
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Service Details</CardTitle>
-        <CardDescription>Select a service and set your pricing within platform bounds</CardDescription>
+        <CardTitle>{isEditing ? "Edit Service" : "Service Details"}</CardTitle>
+        <CardDescription>
+          {isEditing
+            ? "Update your service details and pricing."
+            : "Select a service and set your pricing within platform bounds"}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -83,7 +104,7 @@ export function TechnicianServiceForm({ services, technicianService }: Technicia
             </div>
           )}
 
-          {services.length === 0 && (
+          {!isEditing && services.length === 0 && (
             <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800">
               You've already added all available services. Check back later for new service offerings.
             </div>
@@ -91,7 +112,12 @@ export function TechnicianServiceForm({ services, technicianService }: Technicia
 
           <div className="space-y-2">
             <Label htmlFor="service">Select Service *</Label>
-            <Select value={formData.service_id} onValueChange={handleServiceSelect} required>
+            <Select
+              value={formData.service_id}
+              onValueChange={handleServiceSelect}
+              required
+              disabled={isEditing}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Choose a service to offer" />
               </SelectTrigger>
@@ -103,6 +129,9 @@ export function TechnicianServiceForm({ services, technicianService }: Technicia
                 ))}
               </SelectContent>
             </Select>
+            {isEditing && (
+              <p className="text-xs text-muted-foreground">Service type cannot be changed once added.</p>
+            )}
           </div>
 
           {selectedService && (
@@ -196,16 +225,34 @@ export function TechnicianServiceForm({ services, technicianService }: Technicia
             </Select>
           </div>
 
-          <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
-            <p className="text-sm text-yellow-800">
-              <strong>Note:</strong> Your service will be pending admin approval before it becomes active. This usually
-              takes 1-2 business days.
-            </p>
-          </div>
+          {isEditing && (
+            <div className="flex items-center space-x-2 border p-4 rounded-md">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+              />
+              <div className="space-y-1">
+                <Label htmlFor="is_active">Active Status</Label>
+                <p className="text-sm text-muted-foreground">
+                  Turn this off if you want to temporarily stop offering this service without deleting it.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {!isEditing && (
+            <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
+              <p className="text-sm text-yellow-800">
+                <strong>Note:</strong> Your service will be pending admin approval before it becomes active. This usually
+                takes 1-2 business days.
+              </p>
+            </div>
+          )}
 
           <div className="flex gap-3 pt-4">
-            <Button type="submit" disabled={loading || !selectedService || services.length === 0} className="flex-1">
-              {loading ? "Adding..." : "Add Service"}
+            <Button type="submit" disabled={loading || !selectedService || (!isEditing && services.length === 0)} className="flex-1">
+              {loading ? (isEditing ? "Updating..." : "Adding...") : (isEditing ? "Update Service" : "Add Service")}
             </Button>
             <Button type="button" variant="outline" onClick={() => router.back()} disabled={loading}>
               Cancel
